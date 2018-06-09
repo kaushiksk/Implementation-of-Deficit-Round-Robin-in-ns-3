@@ -183,7 +183,9 @@ Furthermore, 802.11n provides an optional mode (GreenField mode) to reduce pream
 
   WifiHelper wifi;
   wifi.SetStandard (WIFI_PHY_STANDARD_80211ac);
-  wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", "DataMode", StringValue("VHtMcs9"), "ControlMode", StringValue("VhtMcs0"));
+  wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", 
+                                "DataMode", StringValue ("VhtMcs9"), 
+                                "ControlMode", StringValue ("VhtMcs0"));
 
   //Install PHY and MAC
   Ssid ssid = Ssid ("ns3-wifi");
@@ -544,6 +546,23 @@ The following code shows how to create an AP with QoS enabled::
 
 To create ad-hoc MAC instances, simply use ``ns3::AdhocWifiMac`` instead of ``ns3::StaWifiMac`` or ``ns3::ApWifiMac``.
 
+In infrastructure mode without QoS enabled, it is also possible to enable PCF support.
+The following code shows how to create a CF-pollable station::
+
+  WifiMacHelper wifiMacHelper;
+  wifiMacHelper.SetType ("ns3::StaWifiMac",
+                         "Ssid", SsidValue (ssid),
+                         "PcfSupported", BooleanValue (true));
+
+PCF also supports an option to change the maximum duration of the contention-free period (which must be a multiple of 1024 microseconds).
+The following code shows how to create an AP with a custom PCF configuration::
+
+  WifiMacHelper wifiMacHelper;
+  wifiMacHelper.SetType ("ns3::ApWifiMac",
+                         "Ssid", SsidValue (ssid),
+                         "PcfSupported", BooleanValue (true),
+                         "CfpMaxDuration", TimeValue (MicroSeconds (20480)));
+
 With QoS-enabled MAC models it is possible to work with traffic belonging to
 four different Access Categories (ACs): **AC_VO** for voice traffic,
 **AC_VI** for video traffic, **AC_BE** for best-effort
@@ -767,7 +786,7 @@ Finally, we manually place them by using the ``ns3::ListPositionAllocator``::
 
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   // ns-3 supports RadioTap and Prism tracing extensions for 802.11
-  wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); 
+  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO); 
 
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
@@ -814,7 +833,7 @@ Each node is equipped with 802.11b Wi-Fi device::
 
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default (); 
   // ns-3 supports RadioTap and Prism tracing extensions for 802.11
-  wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); 
+  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO); 
 
   YansWifiChannelHelper wifiChannel;
   // reference loss must be changed since 802.11b is operating at 2.4GHz

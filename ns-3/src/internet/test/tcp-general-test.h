@@ -23,6 +23,7 @@
 #include "ns3/error-model.h"
 #include "ns3/tcp-socket-base.h"
 #include "ns3/tcp-congestion-ops.h"
+#include "ns3/tcp-recovery-ops.h"
 #include "ns3/test.h"
 
 namespace ns3 {
@@ -321,6 +322,18 @@ protected:
    */
   virtual Ptr<TcpSocketMsgBase> CreateSocket (Ptr<Node> node, TypeId socketType,
                                               TypeId congControl);
+
+  /**
+   * \brief Create a socket
+   *
+   * \param node associated node
+   * \param socketType Type of the TCP socket
+   * \param congControl congestion control
+   * \param recoveryAlgorithm recovery algorithm
+   * \return a pointer to the newer created socket
+   */
+  virtual Ptr<TcpSocketMsgBase> CreateSocket (Ptr<Node> node, TypeId socketType,
+                                              TypeId congControl, TypeId recoveryAlgorithm);
 
   /**
    * \brief Get the pointer to a previously created sender socket
@@ -624,6 +637,13 @@ protected:
   void SetCongestionControl (TypeId congControl) { m_congControlTypeId = congControl; }
 
   /**
+   * \brief recovery algorithm of the sender socket
+   *
+   * \param recovery typeid of the recovery algorithm
+   */
+  void SetRecoveryAlgorithm (TypeId reccovery) { m_recoveryTypeId = reccovery; }
+
+  /**
    * \brief MTU of the bottleneck link
    *
    * \param mtu MTU
@@ -638,6 +658,8 @@ protected:
   virtual void CongStateTrace (const TcpSocketState::TcpCongState_t oldValue,
                                const TcpSocketState::TcpCongState_t newValue)
   {
+    NS_UNUSED (oldValue);
+    NS_UNUSED (newValue);
   }
 
   /**
@@ -648,6 +670,20 @@ protected:
    */
   virtual void CWndTrace (uint32_t oldValue, uint32_t newValue)
   {
+    NS_UNUSED (oldValue);
+    NS_UNUSED (newValue);
+  }
+
+  /**
+   * \brief Tracks the inflated congestion window changes
+   *
+   * \param oldValue old value
+   * \param newValue new value
+   */
+  virtual void CWndInflTrace (uint32_t oldValue, uint32_t newValue)
+  {
+    NS_UNUSED (oldValue);
+    NS_UNUSED (newValue);
   }
 
   /**
@@ -660,6 +696,8 @@ protected:
    */
   virtual void RttTrace (Time oldTime, Time newTime)
   {
+    NS_UNUSED (oldTime);
+    NS_UNUSED (newTime);
   }
 
   /**
@@ -672,6 +710,8 @@ protected:
    */
   virtual void SsThreshTrace (uint32_t oldValue, uint32_t newValue)
   {
+    NS_UNUSED (oldValue);
+    NS_UNUSED (newValue);
   }
 
   /**
@@ -684,6 +724,50 @@ protected:
    */
   virtual void BytesInFlightTrace (uint32_t oldValue, uint32_t newValue)
   {
+    NS_UNUSED (oldValue);
+    NS_UNUSED (newValue);
+  }
+
+  /**
+   * \brief RTO changes
+   *
+   * This applies only for sender socket.
+   *
+   * \param oldValue old value
+   * \param newValue new value
+   */
+  virtual void RtoTrace (Time oldValue, Time newValue)
+  {
+    NS_UNUSED (oldValue);
+    NS_UNUSED (newValue);
+  }
+
+  /**
+   * \brief Next tx seq changes
+   *
+   * This applies only for sender socket.
+   *
+   * \param oldValue old value
+   * \param newValue new value
+   */
+  virtual void NextTxSeqTrace (SequenceNumber32 oldValue, SequenceNumber32 newValue)
+  {
+    NS_UNUSED (oldValue);
+    NS_UNUSED (newValue);
+  }
+
+  /**
+   * \brief Highest tx seq changes
+   *
+   * This applies only for sender socket.
+   *
+   * \param oldValue old value
+   * \param newValue new value
+   */
+  virtual void HighestTxSeqTrace (SequenceNumber32 oldValue, SequenceNumber32 newValue)
+  {
+    NS_UNUSED (oldValue);
+    NS_UNUSED (newValue);
   }
 
   /**
@@ -692,6 +776,7 @@ protected:
    */
   virtual void NormalClose (SocketWho who)
   {
+    NS_UNUSED (who);
   }
 
   /**
@@ -702,6 +787,7 @@ protected:
   virtual void ErrorClose  (SocketWho who)
   {
     /** \todo indicate the error */
+    NS_UNUSED (who);
   }
 
   /**
@@ -710,6 +796,7 @@ protected:
    */
   virtual void QueueDrop   (SocketWho who)
   {
+    NS_UNUSED (who);
   }
 
   /**
@@ -718,6 +805,7 @@ protected:
    */
   virtual void PhyDrop     (SocketWho who)
   {
+    NS_UNUSED (who);
   }
 
   /**
@@ -732,6 +820,9 @@ protected:
   virtual void RcvAck      (const Ptr<const TcpSocketState> tcb,
                             const TcpHeader& h, SocketWho who)
   {
+    NS_UNUSED (tcb);
+    NS_UNUSED (h);
+    NS_UNUSED (who);
   }
 
   /**
@@ -746,6 +837,9 @@ protected:
   virtual void ProcessedAck (const Ptr<const TcpSocketState> tcb,
                              const TcpHeader& h, SocketWho who)
   {
+    NS_UNUSED (tcb);
+    NS_UNUSED (h);
+    NS_UNUSED (who);
   }
 
   /**
@@ -774,6 +868,8 @@ protected:
    */
   virtual void AfterRTOExpired (const Ptr<const TcpSocketState> tcb, SocketWho who)
   {
+    NS_UNUSED (tcb);
+    NS_UNUSED (who);
   }
 
   /**
@@ -784,6 +880,8 @@ protected:
    */
   virtual void BeforeRTOExpired (const Ptr<const TcpSocketState> tcb, SocketWho who)
   {
+    NS_UNUSED (tcb);
+    NS_UNUSED (who);
   }
 
   /**
@@ -796,6 +894,10 @@ protected:
   virtual void UpdatedRttHistory (const SequenceNumber32 & seq, uint32_t sz,
                                   bool isRetransmission, SocketWho who)
   {
+    NS_UNUSED (seq);
+    NS_UNUSED (sz);
+    NS_UNUSED (isRetransmission);
+    NS_UNUSED (who);
   }
 
   /**
@@ -806,6 +908,8 @@ protected:
    */
   virtual void DataSent (uint32_t size, SocketWho who)
   {
+    NS_UNUSED (size);
+    NS_UNUSED (who);
   }
 
   /**
@@ -871,6 +975,7 @@ protected:
   }
 
   TypeId   m_congControlTypeId;      //!< Congestion control
+  TypeId   m_recoveryTypeId;         //!< Recovery
 
 private:
   // Member variables, accessible through getters

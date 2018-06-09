@@ -40,9 +40,10 @@ In brief, the native |ns3| TCP model supports a full bidirectional TCP with
 connection setup and close logic.  Several congestion control algorithms
 are supported, with NewReno the default, and Westwood, Hybla, HighSpeed,
 Vegas, Scalable, Veno, Binary Increase Congestion Control (BIC), Yet Another
-HighSpeed TCP (YeAH), Illinois, H-TCP and Low Extra Delay Background Transport
-(LEDBAT) also supported. The model also supports Selective Acknowledgements
-(SACK). Multipath-TCP is not yet supported in the |ns3| releases.
+HighSpeed TCP (YeAH), Illinois, H-TCP, Low Extra Delay Background Transport
+(LEDBAT) and TCP Low Priority (TCP-LP) also supported. The model also supports
+Selective Acknowledgements (SACK). Multipath-TCP is not yet supported in the |ns3|
+releases.
 
 Model history
 +++++++++++++
@@ -393,7 +394,7 @@ to such value.
 .. math::   cWnd = (1-b(cWnd)) \cdot cWnd
 
 The lookup table for the function b() is taken from the same RFC.
-More informations at: http://dl.acm.org/citation.cfm?id=2756518
+More information at: http://dl.acm.org/citation.cfm?id=2756518
 
 Hybla
 ^^^^^
@@ -407,7 +408,7 @@ This coefficient is used to calculate both the slow start threshold
 and the congestion window when in slow start and in congestion avoidance,
 respectively.
 
-More informations at: http://dl.acm.org/citation.cfm?id=2756518
+More information at: http://dl.acm.org/citation.cfm?id=2756518
 
 Westwood
 ^^^^^^^^
@@ -418,7 +419,7 @@ bandwidth and use the estimated value to adjust the cwnd.·
 While Westwood performs the bandwidth sampling every ACK reception,·
 Westwood+ samples the bandwidth every RTT.
 
-More informations at: http://dl.acm.org/citation.cfm?id=381704 and
+More information at: http://dl.acm.org/citation.cfm?id=381704 and
 http://dl.acm.org/citation.cfm?id=2512757
 
 Vegas
@@ -445,7 +446,7 @@ Following the implementation of Vegas in Linux, we use 2, 4, and 1 as the
 default values of alpha, beta, and gamma, respectively, but they can be
 modified through the Attribute system.
 
-More informations at: http://dx.doi.org/10.1109/49.464716
+More information at: http://dx.doi.org/10.1109/49.464716
 
 Scalable
 ^^^^^^^^
@@ -464,7 +465,7 @@ the following equation:
 
 .. math::  cwnd = cwnd - ceil(0.125 \cdot cwnd)
 
-More informations at: http://dl.acm.org/citation.cfm?id=956989
+More information at: http://dl.acm.org/citation.cfm?id=956989
 
 Veno
 ^^^^
@@ -502,7 +503,7 @@ because the loss encountered is more likely a corruption-based loss than a
 congestion-based.  Only when N is greater than beta, Veno halves its sending
 rate as in Reno.
 
-More informations at: http://dx.doi.org/10.1109/JSAC.2002.807336
+More information at: http://dx.doi.org/10.1109/JSAC.2002.807336
 
 Bic
 ^^^
@@ -525,7 +526,7 @@ If a loss occur in either these phases, the current window (before the loss)
 can be treated as the new maximum, and the reduced (with a multiplicative
 decrease factor Beta) window size can be used as the new minimum.
 
-More informations at: http://ieeexplore.ieee.org/xpl/articleDetails.jsp?arnumber=1354672
+More information at: http://ieeexplore.ieee.org/xpl/articleDetails.jsp?arnumber=1354672
 
 YeAH
 ^^^^
@@ -722,7 +723,6 @@ The following unit tests have been written to validate the implementation of LED
 * LEDBAT should operate same as NewReno during slow start
 * LEDBAT should operate same as NewReno if timestamps are disabled
 * Test to validate cwnd increment in LEDBAT
-* Test to validate cwnd decrement in LEDBAT
 
 In comparison to RFC 6817, the scope and limitations of the current LEDBAT
 implementation are:
@@ -732,6 +732,33 @@ implementation are:
 * Only the MIN function is used for noise filtering 
 
 More information about LEDBAT is available in RFC 6817: https://tools.ietf.org/html/rfc6817
+
+TCP-LP
+^^^^^^
+
+TCP-Low priority is a delay based congestion control protocol in which the low
+priority data utilizes only the excess bandwidth available on an end-to-end path.
+TCP-LP uses one way delay measurements as an indicator of congestion as it does
+not influence cross-traffic in the reverse direction.
+
+On acknowledgement:
+
+.. math::
+
+  One way delay = Receiver timestamp - Receiver timestamp echo reply
+  Smoothed one way delay = 7/8 * Old Smoothed one way delay + 1/8 * one way delay
+  If smoothed one way delay > owdMin + 15 * (owdMax - owdMin) / 100
+    if LP_WITHIN_INF
+      cwnd = 1
+    else
+      cwnd = cwnd / 2
+    Inference timer is set
+
+where owdMin and owdMax are the minimum and maximum one way delays experienced
+throughout the connection, LP_WITHIN_INF indicates if TCP-LP is in inference
+phase or not
+
+More information (paper): http://cs.northwestern.edu/~akuzma/rice/doc/TCP-LP.pdf
 
 Validation
 ++++++++++
@@ -759,6 +786,7 @@ section below on :ref:`Writing-tcp-tests`.
 * **tcp-yeah-test:** Unit tests on the YeAH congestion control
 * **tcp-illinois-test:** Unit tests on the Illinois congestion control
 * **tcp-ledbat-test:** Unit tests on the LEDBAT congestion control
+* **tcp-lp-test:** Unit tests on the TCP-LP congestion control
 * **tcp-option:** Unit tests on TCP options
 * **tcp-pkts-acked-test:** Unit test the number of time that PktsAcked is called
 * **tcp-rto-test:** Unit test behavior after a RTO timeout occurs
@@ -767,6 +795,7 @@ section below on :ref:`Writing-tcp-tests`.
 * **tcp-timestamp:** Unit test on the timestamp option
 * **tcp-wscaling:** Unit test on the window scaling option
 * **tcp-zero-window-test:** Unit test persist behavior for zero window conditions
+* **tcp-close-test:** Unit test on the socket closing: both receiver and sender have to close their socket when all bytes are transferred
 
 Several tests have dependencies outside of the ``internet`` module, so they
 are located in a system test directory called ``src/test/ns3tcp``.  Three
@@ -803,6 +832,7 @@ Linux, and the following operations are defined:
   virtual void IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
   virtual void PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,const Time& rtt);
   virtual Ptr<TcpCongestionOps> Fork ();
+  virtual void CwndEvent (Ptr<TcpSocketState> tcb, const TcpSocketState::TcpCaEvent_t event);
 
 The most interesting methods to write are GetSsThresh and IncreaseWindow.
 The latter is called when TcpSocketBase decides that it is time to increase
@@ -817,48 +847,127 @@ are then asked to lower such value, and to return it.
 PktsAcked is used in case the algorithm needs timing information (such as
 RTT), and it is called each time an ACK is received.
 
+CwndEvent is used in case the algorithm needs the state of socket during different
+congestion window event.
+
 TCP SACK and non-SACK
 +++++++++++++++++++++
 To avoid code duplication and the effort of maintaining two different versions
-of the TCP core, namely RFC 6675 (TCP-SACK) and RFC 5681 (TCP congestion
-control), we have merged RFC 6675 in the current code base. If the receiver
-supports the option, the sender bases its retransmissions over the received
-SACK information. However, in the absence of that option, the best it can do is
-to follow the RFC 5681 specification (on Fast Retransmit/Recovery) and
-employing NewReno modifications in case of partial ACKs.
+of the TCP core, namely RFC 6675 (TCP-SACK) and RFC 5681 (TCP congestion control),
+we have merged RFC 6675 in the current code base. If the receiver supports the
+option, the sender bases its retransmissions over the received SACK information.
+However, in the absence of that option, the best it can do is to follow the RFC
+5681 specification (on Fast Retransmit/Recovery) and employing NewReno
+modifications in case of partial ACKs.
 
-The merge work consisted in implementing an emulation of fake SACK options in
-the sender (when the receiver does not support SACK) following RFC 5681 rules.
-The generation is straightforward: each duplicate ACK (following the definition
-of RFC 5681) carries a new SACK option, that indicates (in increasing order)
-the blocks transmitted after the SND.UNA, not including the block starting from
-SND.UNA itself.
-
-With this emulated SACK information, the sender behaviour is unified in these
-two cases. By carefully generating these SACK block, we are able to employ all
-the algorithms outlined in RFC 6675 (e.g. Update(), NextSeg(), IsLost()) during
-non-SACK transfers. Of course, in the case of RTO expiration, no guess about
-SACK block could be made, and so they are not generated (consequently, the
-implementation will re-send all segments starting from SND.UNA, even the ones
-correctly received). Please note that the generated SACK option (in the case of
-a non-SACK receiver) by the sender never leave the sender node itself; they are
-created locally by the TCP implementation and then consumed.
-
-A similar concept is used in Linux with the function tcp_add_reno_sack. Our
-implementation resides in the TcpTxBuffer class that implements a scoreboard
+A similar concept is used in Linux with the function tcp_add_reno_sack.
+Our implementation resides in the TcpTxBuffer class that implements a scoreboard
 through two different lists of segments. TcpSocketBase actively uses the API
 provided by TcpTxBuffer to query the scoreboard; please refer to the Doxygen
 documentation (and to in-code comments) if you want to learn more about this
 implementation.
 
-When SACK attribute is enabled for the receiver socket, the sender will not
-craft any SACK option, relying only on what it receives from the network.
+Loss Recovery Algorithms
+++++++++++++++++++++++++
+The following loss recovery algorithms are supported in ns-3 TCP:
+
+Classic Recovery
+^^^^^^^^^^^^^^^^
+Classic Recovery refers to the combination of NewReno algorithm described in
+RFC 6582 along with SACK based loss recovery algorithm mentioned in RFC 6675.
+SACK based loss recovery is used when sender and receiver support SACK options.
+In the case when SACK options are disabled, the NewReno modification handles
+the recovery.
+
+At the start of recovery phase the congestion window is reduced diffently for
+NewReno and SACK based recovery. For NewReno the reduction is done as given below:
+
+.. math::  cWnd = ssThresh
+
+For SACK based recovery, this is done as follows:
+
+.. math::   cWnd = ssThresh + (dupAckCount * segmentSize)
+
+While in the recovery phase, the congestion window is inflated by segmentSize
+on arrival of every ACK when NewReno is used. The congestion window is kept
+same when SACK based loss recovery is used.
+
+Proportional Rate Reduction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Proportional Rate Reduction (PRR) is the fast recovery algorithm described in
+RFC 6937 and currently used in Linux. The design of PRR helps in avoiding
+excess window adjustments and aims to keep the congestion window as close as
+possible to ssThresh.
+
+PRR updates the congestion window by comparing the values of bytesInFlight and
+ssThresh. If the value of bytesInFlight is greater than ssThresh, congestion window
+is updated as shown below:
+
+.. math::  sndcnt = CEIL(prrDelivered * ssThresh / RecoverFS) - prrOut
+.. math::  cWnd = pipe + sndcnt
+
+where ``RecoverFS`` is the value of bytesInFlight at the start of recovery phase,
+``prrDelivered`` is the total bytes delivered during recovery phase,
+``prrOut`` is the total bytes sent during recovery phase and
+``sndcnt`` represents the number of bytes to be sent in response to each ACK.
+
+Otherwise, the congestion window is updated by either using Conservative Reduction
+Bound (CRB) or Slow Start Reduction Bound (SSRB) with SSRB being the default
+Reduction Bound. Each Reduction Bound calculates a maximum data sending limit.
+For CRB, the limit is calculated as shown below:
+
+.. math::  limit = prrDelivered - prr out
+
+For SSRB, it is calculated as:
+
+.. math::  limit = MAX(prrDelivered - prrOut, DeliveredData) + MSS
+
+where ``DeliveredData`` represets the total number of bytes delivered to the
+receiver as indicated by the current ACK and ``MSS`` is the maximum segment size.
+
+After limit calculation, the cWnd is updated as given below:
+
+.. math::  sndcnt = MIN (ssThresh - pipe, limit)
+.. math::  cWnd = pipe + sndcnt
+
+More information (paper):  https://dl.acm.org/citation.cfm?id=2068832
+
+More information (RFC):  https://tools.ietf.org/html/rfc6937
+
+Adding a new loss recovery algorithm in ns-3
+++++++++++++++++++++++++++++++++++++++++++++
+
+Writing (or porting) a loss recovery algorithms from scratch (or from
+other systems) is a process completely separated from the internals of
+TcpSocketBase.
+
+All operations that are delegated to a loss recovery are contained in
+the class TcpRecoveryOps and are given below:
+
+.. code-block:: c++
+
+  virtual std::string GetName () const;
+  virtual void EnterRecovery (Ptr<const TcpSocketState> tcb, uint32_t unAckDataCount,
+                              bool isSackEnabled, uint32_t dupAckCount,
+                              uint32_t bytesInFlight, uint32_t lastDeliveredBytes);
+  virtual void DoRecovery (Ptr<const TcpSocketState> tcb, uint32_t unAckDataCount,
+                           bool isSackEnabled, uint32_t dupAckCount,
+                           uint32_t bytesInFlight, uint32_t lastDeliveredBytes);
+  virtual void ExitRecovery (Ptr<TcpSocketState> tcb, uint32_t bytesInFlight);
+  virtual void UpdateBytesSent (uint32_t bytesSent);
+  virtual Ptr<TcpRecoveryOps> Fork ();
+
+EnterRecovery is called when packet loss is detected and recovery is triggered.
+While in recovery phase, each time when an ACK arrives, DoRecovery is called which
+performs the necessary congestion window changes as per the recovery algorithm.
+ExitRecovery is called just prior to exiting recovery phase in order to perform the
+required congestion window ajustments. UpdateBytesSent is used to keep track of
+bytes sent and is called whenever a data packet is sent during recovery phase.
 
 Current limitations
 +++++++++++++++++++
 
 * TcpCongestionOps interface does not contain every possible Linux operation
-* Fast retransmit / fast recovery are bound with TcpSocketBase, thereby preventing easy simulation of TCP Tahoe
 
 .. _Writing-tcp-tests:
 
